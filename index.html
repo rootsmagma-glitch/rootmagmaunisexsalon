@@ -1877,7 +1877,7 @@ document.querySelectorAll('.faq-item').forEach(item => {
               <div class="apt-cat-group" data-category="hairmale">
                 <div class="apt-cat-header">👨 HAIR — MALE</div>
                 <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Male Hair Cut" data-price="200"> <span>Hair Cut (Male)</span> <span class="apt-price-tag">₹200</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
-                <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Beard Shaving & Styling" data-price="1000"> <span>Beard</span> <span class="apt-price-tag">₹1,000</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
+                <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Beard Shaving & Styling" data-price="100"> <span>Beard</span> <span class="apt-price-tag">₹100</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
                 <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Male Hair Spa Regular" data-price="800"> <span>Hair Spa Regular</span> <span class="apt-price-tag">₹800</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
                 <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Male Head Massage" data-price="500"> <span>Head Massage</span> <span class="apt-price-tag">₹500</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
                 <label class="apt-service-item"><input type="checkbox" class="apt-service-cb" data-name="Male Hair Spa Treatment" data-price="1000"> <span>Hair Spa Treatment</span> <span class="apt-price-tag">₹1,000</span> <input type="number" class="apt-price-override" placeholder="Custom ₹"></label>
@@ -2006,7 +2006,7 @@ const saveStatus = document.getElementById('aptSaveStatus');
 // Load persistent saved prices from localStorage
 function loadSavedPrices() {
   try {
-    const saved = localStorage.getItem('ruth_magma_custom_prices');
+    const saved = localStorage.getItem('roots_magma_custom_prices') || localStorage.getItem('ruth_magma_custom_prices');
     if (saved) {
       const priceMap = JSON.parse(saved);
       document.querySelectorAll('.apt-service-cb').forEach(cb => {
@@ -2019,7 +2019,7 @@ function loadSavedPrices() {
             const priceTag = itemEl.querySelector('.apt-price-tag');
             const overrideInput = itemEl.querySelector('.apt-price-override');
             if (priceTag) priceTag.textContent = newPrice > 0 ? `₹${newPrice.toLocaleString('en-IN')}` : (name.includes('Other') ? 'Custom' : '₹0');
-            if (overrideInput && !overrideInput.value) overrideInput.value = newPrice;
+            if (overrideInput) overrideInput.value = newPrice;
           }
         }
       });
@@ -2043,12 +2043,19 @@ function checkOwnerMode() {
 
   // Toggle price override inputs in service items
   document.querySelectorAll('.apt-service-item').forEach(item => {
+    const cb = item.querySelector('.apt-service-cb');
     const overrideInput = item.querySelector('.apt-price-override');
     const priceTag = item.querySelector('.apt-price-tag');
     if (overrideInput) {
       if (isOwner) {
         overrideInput.style.display = 'inline-block';
         if (priceTag) priceTag.style.display = 'none';
+        if (cb && !overrideInput.value) {
+          const currentPrice = cb.getAttribute('data-price');
+          if (currentPrice !== null && currentPrice !== '0') {
+            overrideInput.value = currentPrice;
+          }
+        }
       } else {
         overrideInput.style.display = 'none';
         if (priceTag) priceTag.style.display = 'inline-block';
@@ -2061,7 +2068,12 @@ function checkOwnerMode() {
 
 // Save Custom Price Changes Permanently
 savePricesBtn?.addEventListener('click', function() {
-  const priceMap = {};
+  let priceMap = {};
+  try {
+    const saved = localStorage.getItem('roots_magma_custom_prices') || localStorage.getItem('ruth_magma_custom_prices');
+    if (saved) priceMap = JSON.parse(saved);
+  } catch (e) {}
+
   document.querySelectorAll('.apt-service-cb').forEach(cb => {
     const name = cb.getAttribute('data-name');
     const itemEl = cb.closest('.apt-service-item');
@@ -2073,13 +2085,17 @@ savePricesBtn?.addEventListener('click', function() {
       if (!isNaN(parsed) && parsed >= 0) {
         cb.setAttribute('data-price', parsed);
         priceMap[name] = parsed;
-        if (priceTag) priceTag.textContent = parsed > 0 ? `₹${parsed.toLocaleString('en-IN')}` : (name.includes('Other') ? 'Custom' : '₹0');
+        const formatted = parsed > 0 ? `₹${parsed.toLocaleString('en-IN')}` : (name.includes('Other') ? 'Custom' : '₹0');
+        if (priceTag) priceTag.textContent = formatted;
+        overrideInput.value = parsed;
       }
     }
   });
 
   try {
-    localStorage.setItem('ruth_magma_custom_prices', JSON.stringify(priceMap));
+    const jsonStr = JSON.stringify(priceMap);
+    localStorage.setItem('roots_magma_custom_prices', jsonStr);
+    localStorage.setItem('ruth_magma_custom_prices', jsonStr);
   } catch (err) {}
 
   if (saveStatus) {
